@@ -1,0 +1,5 @@
+# Dependencies and OS junk. Never ignore .kiro/ — the Kiroween rules
+# require the .kiro directory at the repo root (it is part of the entry).
+node_modules/
+.DS_Store
+*.log

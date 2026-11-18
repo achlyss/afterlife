@@ -1,0 +1,286 @@
+/* Afterlife — graveyard theme. Dark, foggy, readable. */
+
+:root {
+  --bg: #0d0f1a;
+  --bg-2: #171a2e;
+  --surface: #1d2138;
+  --surface-2: #262b47;
+  --bone: #ece5d3;
+  --bone-dim: #b9b2a0;
+  --moss: #7fa36a;
+  --pumpkin: #e8823a;
+  --blood: #d64545;
+  --gold: #d9b45b;
+  --line: #343a5e;
+  --focus: #8fb8ff;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 60%, #101221 100%);
+  color: var(--bone);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.55;
+  min-height: 100vh;
+}
+
+/* Drifting fog (pure CSS, no images) */
+.fog {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 22% at 20% 78%, rgba(148, 163, 184, 0.10), transparent 70%),
+    radial-gradient(ellipse 50% 18% at 85% 62%, rgba(148, 163, 184, 0.08), transparent 70%);
+}
+.fog--b {
+  background:
+    radial-gradient(ellipse 45% 16% at 70% 88%, rgba(127, 163, 106, 0.07), transparent 70%),
+    radial-gradient(ellipse 40% 14% at 10% 40%, rgba(232, 130, 58, 0.05), transparent 70%);
+}
+
+header.site-header, main, footer.site-footer { position: relative; z-index: 1; }
+
+h1, h2, h3 {
+  font-family: Georgia, "Times New Roman", serif;
+  letter-spacing: 0.02em;
+  margin: 0 0 0.4em;
+}
+h2 { font-size: 1.6rem; border-bottom: 1px solid var(--line); padding-bottom: 0.35em; }
+h2 .section-sub { font-size: 0.95rem; color: var(--bone-dim); font-family: inherit; font-style: italic; }
+
+a { color: var(--gold); }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* ---------- header ---------- */
+
+.site-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-start;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2.2rem 1.2rem 1rem;
+}
+.moon { font-size: 4rem; line-height: 1; filter: drop-shadow(0 0 18px rgba(236, 229, 211, 0.45)); }
+.site-header__text { flex: 1 1 320px; }
+.site-header__text h1 { font-size: 3rem; margin: 0; }
+.tagline { font-size: 1.15rem; color: var(--bone-dim); margin: 0.1em 0 0.6em; font-style: italic; }
+.privacy-badge { font-size: 0.9rem; color: var(--moss); margin: 0; }
+.demo-badge {
+  background: var(--pumpkin); color: #1a1206; font-weight: 700;
+  border-radius: 4px; padding: 0.1em 0.45em; margin-left: 0.4em;
+}
+
+.score-card {
+  flex: 0 0 300px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  text-align: center;
+  position: relative;
+}
+.score-dial { transform: rotate(-90deg); }
+.score-dial__track { fill: none; stroke: var(--surface-2); stroke-width: 10; }
+.score-dial__value {
+  fill: none; stroke: var(--moss); stroke-width: 10; stroke-linecap: round;
+  stroke-dasharray: 339.29; stroke-dashoffset: 339.29;
+  transition: stroke-dashoffset 0.8s ease, stroke 0.8s ease;
+}
+.score-card__number {
+  font-family: Georgia, serif; font-size: 2.2rem; line-height: 1;
+  margin-top: -4.4rem; margin-bottom: 2.6rem;
+}
+.score-card__number small { font-size: 1rem; color: var(--bone-dim); }
+.score-card__title { font-family: Georgia, serif; font-size: 1.05rem; margin: 0.2em 0 0; }
+.score-card__label { color: var(--bone-dim); font-size: 0.92rem; margin: 0.2em 0 0.4em; }
+.score-card__counts { font-size: 0.9rem; color: var(--gold); margin: 0 0 0.5em; }
+.next-steps { text-align: left; margin: 0.4em 0 0; padding-left: 0.2em; list-style: none; font-size: 0.88rem; color: var(--bone-dim); }
+.next-steps li { margin: 0.25em 0; }
+
+/* ---------- layout ---------- */
+
+main { max-width: 1100px; margin: 0 auto; padding: 0.5rem 1.2rem 2rem; }
+section { margin: 2.4rem 0; }
+.section-intro { color: var(--bone-dim); max-width: 70ch; }
+.empty-note { color: var(--bone-dim); font-style: italic; }
+.fine-print { font-size: 0.86rem; color: var(--bone-dim); }
+.form-error { color: #ff9d9d; font-weight: 600; min-height: 1.2em; }
+
+/* ---------- buttons & inputs ---------- */
+
+.btn {
+  background: var(--surface-2); color: var(--bone);
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 0.55em 1em; font-size: 0.95rem; cursor: pointer;
+}
+.btn:hover { border-color: var(--bone-dim); }
+.btn--primary { background: var(--pumpkin); border-color: var(--pumpkin); color: #1a1206; font-weight: 700; }
+.btn--primary:hover { filter: brightness(1.1); }
+.btn--danger { border-color: var(--blood); color: #ffb3b3; }
+.btn--danger:hover { background: rgba(214, 69, 69, 0.15); }
+.btn--small { padding: 0.3em 0.7em; font-size: 0.86rem; }
+.btn--big { font-size: 1.05rem; padding: 0.7em 1.2em; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+input[type="text"], input[type="email"], input[type="tel"],
+input[type="search"], input[type="password"], select, textarea {
+  background: #12142a; color: var(--bone);
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 0.5em 0.7em; font-size: 0.95rem; width: 100%;
+}
+input[type="range"] { width: 100%; accent-color: var(--pumpkin); }
+input[type="checkbox"] { width: auto; accent-color: var(--pumpkin); }
+label { display: block; font-size: 0.92rem; color: var(--bone-dim); margin: 0.5em 0; }
+label > input, label > select, label > textarea { margin-top: 0.25em; }
+
+/* ---------- graveyard ---------- */
+
+.filters {
+  display: flex; flex-wrap: wrap; gap: 0.7rem; align-items: end;
+  margin: 1rem 0;
+}
+.filters label { flex: 1 1 150px; margin: 0; }
+.filters__check { flex: 0 0 auto; display: flex; gap: 0.4em; align-items: center; padding-bottom: 0.5em; }
+.filters .btn { flex: 0 0 auto; }
+
+.grave-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+.grave-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.grave-card--ghost { border-style: dashed; border-color: var(--pumpkin); }
+.grave-stone {
+  background: linear-gradient(180deg, #3a3f5e, #2a2e45);
+  border-radius: 110px 110px 0 0 / 70px 70px 0 0;
+  padding: 1.2rem 1rem 0.9rem;
+  text-align: center;
+  border-bottom: 1px solid var(--line);
+}
+.grave-stone__name { font-size: 1.2rem; margin: 0; }
+.grave-stone__user { color: var(--bone-dim); margin: 0.15em 0; font-size: 0.92rem; word-break: break-all; }
+.grave-stone__cat { color: var(--gold); margin: 0.2em 0 0; font-size: 0.88rem; }
+.grave-card__body { padding: 0.8rem 1rem 1rem; display: flex; flex-direction: column; gap: 0.5em; flex: 1; }
+.grave-card__heir, .grave-card__notes { margin: 0; font-size: 0.92rem; color: var(--bone-dim); }
+.grave-card__actions { display: flex; gap: 0.5rem; margin-top: auto; padding-top: 0.4em; }
+
+.badge {
+  display: inline-block; font-size: 0.85rem;
+  background: rgba(127, 163, 106, 0.18); color: #b7d3a6;
+  border-radius: 20px; padding: 0.2em 0.7em; width: fit-content;
+}
+.badge--ghost { background: rgba(232, 130, 58, 0.18); color: #f4b27a; }
+
+/* ---------- heirs & will ---------- */
+
+.heir-list { list-style: none; padding: 0; margin: 1rem 0; display: grid; gap: 0.6rem; }
+.heir-item {
+  display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: center;
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 10px; padding: 0.7rem 1rem;
+}
+.heir-item__info { flex: 1 1 220px; display: flex; flex-direction: column; }
+.heir-item__meta { color: var(--bone-dim); font-size: 0.9rem; }
+.heir-item__count { color: var(--gold); font-size: 0.9rem; }
+
+.inline-form, .will-box {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: 12px; padding: 1rem 1.2rem; margin: 1rem 0;
+}
+.inline-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0 1rem; }
+.inline-form h3, .inline-form .form-error, .inline-form .btn { grid-column: 1 / -1; }
+.will-output {
+  background: #f7f2e4; color: #221d12;
+  font-family: Georgia, "Times New Roman", serif;
+  padding: 1.4rem; border-radius: 8px; white-space: pre-wrap;
+  word-break: break-word; margin-top: 1rem; font-size: 0.95rem;
+}
+
+/* ---------- séance ---------- */
+
+.seance-panel { display: flex; flex-wrap: wrap; gap: 1.2rem; align-items: center; }
+.seance-moon { font-size: 4.2rem; filter: drop-shadow(0 0 16px rgba(236, 229, 211, 0.35)); }
+.seance-controls { flex: 1 1 300px; display: flex; flex-direction: column; gap: 0.6rem; align-items: flex-start; }
+.seance-banner {
+  border-radius: 10px; padding: 0.9rem 1.1rem; margin: 1rem 0 0.4rem;
+  border: 1px solid var(--line); background: var(--surface);
+}
+.seance-banner--due { border-color: var(--pumpkin); background: rgba(232, 130, 58, 0.12); }
+.seance-banner--overdue { border-color: var(--blood); background: rgba(214, 69, 69, 0.12); }
+.seance-banner--released { border-color: var(--blood); background: rgba(214, 69, 69, 0.2); font-weight: 600; }
+.seance-countdown { color: var(--bone-dim); }
+.release-screen {
+  background: #241a1a; border: 1px solid var(--blood);
+  border-radius: 12px; padding: 1rem 1.2rem; margin-top: 1rem;
+}
+.release-screen ul { margin: 0.3em 0 0.8em; }
+
+/* ---------- vault ---------- */
+
+.vault-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; }
+.vault-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.vault-card h3 { margin-bottom: 0; }
+
+/* ---------- dialog, toast, footer ---------- */
+
+.dialog {
+  background: var(--surface); color: var(--bone);
+  border: 1px solid var(--line); border-radius: 14px;
+  padding: 1.4rem; max-width: 520px; width: calc(100% - 2rem);
+}
+.dialog::backdrop { background: rgba(5, 6, 12, 0.75); }
+.dialog-actions { display: flex; gap: 0.6rem; margin-top: 0.8rem; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 1.4rem; transform: translateX(-50%) translateY(20px);
+  background: var(--bone); color: #171a2e; font-weight: 600;
+  padding: 0.7em 1.2em; border-radius: 30px; opacity: 0;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  pointer-events: none; z-index: 10; max-width: 90vw; text-align: center;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+.site-footer {
+  max-width: 1100px; margin: 0 auto; padding: 1rem 1.2rem 2.5rem;
+  color: var(--bone-dim); font-size: 0.88rem;
+  border-top: 1px solid var(--line);
+}
+
+/* ---------- print: only the will letter ---------- */
+
+@media print {
+  body { background: #fff; color: #000; }
+  .fog, .site-header, main > section:not(#heirs), .site-footer, .toast,
+  .will-box > *:not(#will-output), #heir-form, #heir-list, #heir-empty { display: none !important; }
+  body.printing-will #heirs { display: block; }
+  body.printing-will #heirs h2, body.printing-will #heirs .section-intro,
+  body.printing-will .will-box h3, body.printing-will .will-box .fine-print,
+  body.printing-will #generate-will, body.printing-will #print-will { display: none !important; }
+  body.printing-will #will-output {
+    display: block !important; border: 1px solid #999;
+    background: #fff; color: #000;
+  }
+}
+
+/* ---------- responsive ---------- */
+
+@media (max-width: 640px) {
+  .site-header__text h1 { font-size: 2.2rem; }
+  .moon { font-size: 3rem; }
+  .score-card { flex-basis: 100%; }
+  .filters label { flex-basis: 100%; }
+}

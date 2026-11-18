@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Afterlife — Your Digital Legacy Planner</title>
+<meta name="description" content="Afterlife is a local-first planner for your digital afterlife: inventory your online accounts, name your heirs, set a check-in rhythm, and generate your legacy letter. Your data never leaves your device.">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="fog fog--a"></div>
+<div class="fog fog--b"></div>
+
+<header class="site-header">
+  <div class="moon" aria-hidden="true">🌕</div>
+  <div class="site-header__text">
+    <h1>Afterlife</h1>
+    <p class="tagline">Your digital legacy planner — lay every ghost to rest.</p>
+    <p class="privacy-badge">🔒 Local-first · No account · No server · Your data never leaves this device <span id="demo-badge" class="demo-badge" style="display:none">👻 DEMO DATA</span></p>
+  </div>
+  <div class="score-card" role="status" aria-label="Haunting Score">
+    <svg class="score-dial" viewBox="0 0 120 120" width="120" height="120" aria-hidden="true">
+      <circle cx="60" cy="60" r="54" class="score-dial__track"></circle>
+      <circle id="score-dial" cx="60" cy="60" r="54" class="score-dial__value"></circle>
+    </svg>
+    <div class="score-card__number"><span id="score-number">0</span><small>/100</small></div>
+    <div class="score-card__title">Haunting Score</div>
+    <p id="score-label" class="score-card__label">Your graveyard is empty.</p>
+    <p class="score-card__counts"><span id="account-count">0 accounts</span> · <span id="ghost-count">0 ghosts</span></p>
+    <ul id="next-steps" class="next-steps"></ul>
+  </div>
+</header>
+
+<main>
+  <!-- 1. The Graveyard -->
+  <section id="graveyard" aria-labelledby="graveyard-title">
+    <h2 id="graveyard-title">🪦 The Graveyard <span class="section-sub">— your accounts, at rest</span></h2>
+    <p class="section-intro">Every online account is a tombstone. Give each one a wish and an heir, and it rests in peace. Leave it blank, and it wanders as a ghost.</p>
+    <div class="filters">
+      <label>Search <input id="filter-query" type="search" placeholder="Service, username, note…"></label>
+      <label>Category
+        <select id="filter-category">
+          <option value="">All categories</option>
+          <option value="social">Social</option>
+          <option value="money">Money &amp; Bank</option>
+          <option value="photos">Photos &amp; Memories</option>
+          <option value="work">Work</option>
+          <option value="entertainment">Entertainment</option>
+          <option value="shopping">Shopping</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
+      <label>Wish
+        <select id="filter-wish">
+          <option value="">Any wish</option>
+          <option value="delete">Delete it</option>
+          <option value="memorialize">Memorialize it</option>
+          <option value="transfer">Transfer to heir</option>
+          <option value="keep">Leave it as is</option>
+        </select>
+      </label>
+      <label class="filters__check"><input id="filter-ghosts" type="checkbox"> 👻 Ghosts only</label>
+      <button id="add-account-btn" class="btn btn--primary">＋ Add an account</button>
+    </div>
+    <p id="grave-empty" class="empty-note">Your graveyard is empty. Add your first account — or load the demo graveyard from the Vault below to see how it works.</p>
+    <p id="grave-noresult" class="empty-note" style="display:none">No tombstones match these filters.</p>
+    <div id="grave-grid" class="grave-grid"></div>
+  </section>
+
+  <!-- 2. Heirs & The Will -->
+  <section id="heirs" aria-labelledby="heirs-title">
+    <h2 id="heirs-title">🕯️ Heirs &amp; The Will <span class="section-sub">— who carries it out</span></h2>
+    <p class="section-intro">Name the people you trust. Assign them accounts in the Graveyard, then generate your legacy letter — a printable document your heirs can actually use.</p>
+    <ul id="heir-list" class="heir-list"></ul>
+    <p id="heir-empty" class="empty-note">No heirs named yet. Without an heir, every account becomes a ghost.</p>
+    <form id="heir-form" class="inline-form">
+      <h3>Name an heir</h3>
+      <label>Name <input id="heir-name" type="text" required placeholder="Ana Rahmani"></label>
+      <label>Relationship <input id="heir-relationship" type="text" placeholder="Sister"></label>
+      <label>Email <input id="heir-email" type="email" required placeholder="ana@example.com"></label>
+      <label>Phone (optional) <input id="heir-phone" type="tel" placeholder="+62 …"></label>
+      <p id="heir-form-error" class="form-error" role="alert"></p>
+      <button type="submit" class="btn btn--primary">Name this heir</button>
+    </form>
+    <div class="will-box">
+      <h3>📜 Generate your legacy letter</h3>
+      <label>Your name <input id="will-author" type="text" placeholder="Your full name"></label>
+      <label>Final message (optional)
+        <textarea id="will-message" rows="3" placeholder="Something you want your heirs to read…"></textarea>
+      </label>
+      <p class="fine-print">The letter is a personal planning document. It is <strong>not a legal will</strong> and does not replace legal advice.</p>
+      <button id="generate-will" class="btn btn--primary">Generate the letter</button>
+      <button id="print-will" class="btn" style="display:none">🖨️ Print / save as PDF</button>
+      <pre id="will-output" class="will-output" style="display:none" tabindex="0"></pre>
+    </div>
+  </section>
+
+  <!-- 3. The Séance -->
+  <section id="seance" aria-labelledby="seance-title">
+    <h2 id="seance-title">🌕 The Séance <span class="section-sub">— the dead-man's check-in</span></h2>
+    <p class="section-intro">Choose how often you check in to say "I'm still here". Miss the deadline and the Séance moves, step by step, toward releasing your will to your heirs. <strong>This is a simulation:</strong> Afterlife never sends anything on its own — the release screen shows exactly what <em>would</em> be shared, so you can verify it while you are alive to do so.</p>
+    <div class="seance-panel">
+      <div id="seance-moon" class="seance-moon" aria-hidden="true">🌑</div>
+      <div class="seance-controls">
+        <label>Check-in rhythm
+          <select id="seance-interval">
+            <option value="">— Not set —</option>
+            <option value="7">Every 7 days</option>
+            <option value="14">Every 14 days</option>
+            <option value="30">Every 30 days</option>
+            <option value="90">Every 90 days</option>
+          </select>
+        </label>
+        <button id="checkin-btn" class="btn btn--primary btn--big">🌕 I'm still here — check in</button>
+        <button id="simulate-missed" class="btn btn--small" title="Demo helper: pretend 40 days passed without a check-in">Demo: simulate 40 days without a check-in</button>
+      </div>
+    </div>
+    <p id="seance-status" class="seance-banner seance-banner--unset" role="status">No rhythm set yet.</p>
+    <p id="seance-countdown" class="seance-countdown"></p>
+    <div id="release-screen" class="release-screen" style="display:none">
+      <h3>🕯️ What would be released</h3>
+      <p class="fine-print">Simulation only — nothing was sent. In a future version with a backend, this is the exact payload that would go to each heir.</p>
+      <div id="release-body"></div>
+    </div>
+  </section>
+
+  <!-- 4. The Vault -->
+  <section id="vault" aria-labelledby="vault-title">
+    <h2 id="vault-title">🔐 The Vault <span class="section-sub">— backup &amp; demo</span></h2>
+    <p class="section-intro">Your plan is only useful if it survives. Export an encrypted backup and keep it somewhere your heirs can find — a USB stick, a safe, a trusted person.</p>
+    <p id="vault-meta" class="fine-print"></p>
+    <div class="vault-grid">
+      <div class="vault-card">
+        <h3>Encrypted backup</h3>
+        <p id="crypto-note" class="fine-print"></p>
+        <label>Passphrase <input id="export-pass" type="password" autocomplete="off" placeholder="At least 4 characters"></label>
+        <button id="export-encrypted" class="btn btn--primary">Download encrypted backup</button>
+      </div>
+      <div class="vault-card">
+        <h3>Restore a backup</h3>
+        <label>Backup file <input id="import-file" type="file" accept=".json,application/json"></label>
+        <label>Passphrase (for encrypted backups) <input id="import-pass" type="password" autocomplete="off" placeholder="Passphrase used at export"></label>
+        <button id="import-encrypted" class="btn">Restore encrypted backup</button>
+        <button id="import-plain" class="btn">Restore plain JSON backup</button>
+      </div>
+      <div class="vault-card">
+        <h3>Plain export</h3>
+        <p class="fine-print">Unencrypted JSON. Useful for moving between browsers — but anyone holding the file can read your plan. Guard it.</p>
+        <button id="export-plain" class="btn">Download plain JSON</button>
+      </div>
+      <div class="vault-card">
+        <h3>Demo &amp; danger zone</h3>
+        <p class="fine-print">Load a fictional graveyard (8 accounts, 2 heirs) to explore every feature in one click.</p>
+        <button id="load-demo" class="btn">👻 Load demo graveyard</button>
+        <button id="erase-all" class="btn btn--danger">Erase everything</button>
+      </div>
+    </div>
+    <p id="vault-error" class="form-error" role="alert"></p>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <p><strong>Afterlife</strong> — built for Kiroween 2026 (Costume Contest). Local-first: your data never leaves this device. The check-in release is a simulation — nothing is ever sent. The legacy letter is a planning document, not a legal will. No passwords are ever stored.</p>
+  <p>Source &amp; docs: see README.md · MIT License</p>
+</footer>
+
+<!-- Add / edit account -->
+<dialog id="account-dialog" class="dialog">
+  <form id="account-form" method="dialog">
+    <h3 id="account-form-title">Add an account</h3>
+    <label>Service <input id="acc-service" type="text" required placeholder="Gmail, Instagram, Bank…"></label>
+    <label>Username <input id="acc-username" type="text" required placeholder="username or email"></label>
+    <label>Category
+      <select id="acc-category">
+        <option value="social">Social</option>
+        <option value="money">Money &amp; Bank</option>
+        <option value="photos">Photos &amp; Memories</option>
+        <option value="work">Work</option>
+        <option value="entertainment">Entertainment</option>
+        <option value="shopping">Shopping</option>
+        <option value="other">Other</option>
+      </select>
+    </label>
+    <label>Importance (1–5)
+      <input id="acc-importance" type="range" min="1" max="5" step="1" value="3">
+    </label>
+    <label>What should happen? (wish)
+      <select id="acc-wish">
+        <option value="">— No wish yet (ghost) —</option>
+        <option value="delete">Delete it</option>
+        <option value="memorialize">Memorialize it</option>
+        <option value="transfer">Transfer to heir</option>
+        <option value="keep">Leave it as is</option>
+      </select>
+    </label>
+    <label>Heir <select id="acc-heir"></select></label>
+    <label>Notes for your heir (instructions, never passwords)
+      <textarea id="acc-notes" rows="2" placeholder="e.g. Give the family photos to Ana. Delete the rest."></textarea>
+    </label>
+    <p class="fine-print">⚠️ Never write passwords here. This planner records <em>wishes</em>, not credentials.</p>
+    <p id="account-form-error" class="form-error" role="alert"></p>
+    <div class="dialog-actions">
+      <button type="submit" class="btn btn--primary">Save tombstone</button>
+      <button type="button" id="account-form-cancel" class="btn">Cancel</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" role="status"></div>
+
+<script src="js/logic.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
