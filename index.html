@@ -62,6 +62,13 @@
       <label class="filters__check"><input id="filter-ghosts" type="checkbox"> 👻 Ghosts only</label>
       <button id="add-account-btn" class="btn btn--primary">＋ Add an account</button>
     </div>
+    <div class="csv-import">
+      <p class="fine-print">Have many accounts? Import them all at once from a CSV file — you will see a preview before anything is saved.</p>
+      <input id="csv-file" type="file" accept=".csv,text/csv" hidden>
+      <button id="csv-import-btn" class="btn">📥 Import CSV…</button>
+      <button id="csv-template-btn" class="btn">📄 Download CSV template</button>
+      <p id="csv-error" class="form-error" role="alert"></p>
+    </div>
     <p id="grave-empty" class="empty-note">Your graveyard is empty. Add your first account — or load the demo graveyard from the Vault below to see how it works.</p>
     <p id="grave-noresult" class="empty-note" style="display:none">No tombstones match these filters.</p>
     <div id="grave-grid" class="grave-grid"></div>
@@ -82,7 +89,7 @@
       <p id="heir-form-error" class="form-error" role="alert"></p>
       <button type="submit" class="btn btn--primary">Name this heir</button>
     </form>
-    <div class="will-box">
+    <div class="will-box" id="will-box">
       <h3>📜 Generate your legacy letter</h3>
       <label>Your name <input id="will-author" type="text" placeholder="Your full name"></label>
       <label>Final message (optional)
@@ -92,6 +99,13 @@
       <button id="generate-will" class="btn btn--primary">Generate the letter</button>
       <button id="print-will" class="btn" style="display:none">🖨️ Print / save as PDF</button>
       <pre id="will-output" class="will-output" style="display:none" tabindex="0"></pre>
+    </div>
+    <div class="will-box" id="checklist-box">
+      <h3>✅ Executor checklist</h3>
+      <p class="fine-print">A step-by-step document for your heirs: first steps, what happens to each account, and who does what. This is a planning document, <strong>not a legal document</strong>.</p>
+      <button id="generate-checklist" class="btn btn--primary">Generate executor checklist</button>
+      <button id="print-checklist" class="btn" style="display:none">🖨️ Print / save as PDF</button>
+      <pre id="checklist-output" class="will-output" style="display:none" tabindex="0"></pre>
     </div>
   </section>
 
@@ -163,6 +177,24 @@
   <p><strong>Afterlife</strong> — built for Kiroween 2026 (Costume Contest). Local-first: your data never leaves this device. The check-in release is a simulation — nothing is ever sent. The legacy letter is a planning document, not a legal will. No passwords are ever stored.</p>
   <p>Source &amp; docs: see README.md · MIT License</p>
 </footer>
+
+<!-- CSV import preview -->
+<dialog id="csv-dialog" class="dialog dialog--wide">
+  <h3>Preview CSV import</h3>
+  <p class="fine-print">Only the valid rows will be imported. Rows with a problem are listed below with their reason — fix the file and try again, or import the valid ones now.</p>
+  <div class="csv-preview">
+    <table id="csv-preview-table">
+      <thead><tr><th>Line</th><th>Service</th><th>Username</th><th>Category</th><th>Wish</th><th>Heir</th><th>Status</th></tr></thead>
+      <tbody id="csv-preview-body"></tbody>
+    </table>
+  </div>
+  <ul id="csv-skipped-list" class="csv-skipped"></ul>
+  <p id="csv-preview-summary" class="fine-print"></p>
+  <div class="dialog-actions">
+    <button id="csv-confirm-btn" class="btn btn--primary">Import accounts</button>
+    <button id="csv-cancel-btn" class="btn">Cancel</button>
+  </div>
+</dialog>
 
 <!-- Add / edit account -->
 <dialog id="account-dialog" class="dialog">

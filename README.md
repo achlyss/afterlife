@@ -23,6 +23,16 @@ makes an uncomfortable topic approachable:
   The higher the score, the fewer ghosts remain.
 - **🔐 The Vault** — encrypted backup (AES-GCM, PBKDF2) you can store
   somewhere your heirs can find, plus plain JSON export/import.
+- **📥 CSV import (v2)** — add many accounts at once from a CSV file
+  (`service,username,category,importance,wish,heir,notes`). Every row is
+  validated like a single account (including the password-in-notes
+  refusal), heirs are matched by name or email, and a preview table shows
+  exactly what will be imported before you confirm. A template CSV is
+  available to download.
+- **✅ Executor Checklist (v2)** — a step-by-step document for your heirs:
+  first steps, what happens to each account grouped by wish, and who does
+  what, per heir. Unresolved ghosts are listed honestly. Printable, like
+  the will letter — and like it, a planning document, not a legal one.
 
 **Privacy by design:** all data lives in your browser's localStorage. No
 account, no server, no tracking, no analytics — the app makes **zero network
@@ -51,7 +61,7 @@ graveyard (8 accounts, 2 heirs) loads automatically, or click
 ## Test it
 
 ```sh
-node tests/test.js          # 25 unit + property tests (zero dependencies)
+node tests/test.js          # 42 unit + property tests (zero dependencies)
 ```
 
 DOM smoke test (loads the real app in jsdom and clicks through every flow):
@@ -59,7 +69,7 @@ DOM smoke test (loads the real app in jsdom and clicks through every flow):
 ```sh
 npm install --no-save jsdom
 python3 -m http.server 8321   # in another terminal, from the repo root
-node tests/smoke-dom.js       # 21 checks
+node tests/smoke-dom.js       # 31 checks
 ```
 
 ## How it works

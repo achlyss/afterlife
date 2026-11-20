@@ -3,6 +3,11 @@
 **Status: APLIKASI SELESAI DIBANGUN + TERUJI. Belum daftar, belum submit —
 langkah yang butuh akun Mas ada di checklist bawah.**
 
+**Update 20 Nov 2026 — v2 SELESAI:** fitur baru CSV import (R9) + Executor
+Checklist (R10) + poles CSS mobile, semua teruji (42 unit test + 31 cek
+DOM, semua lolos). Format data v1 tidak berubah — plan lama tetap bisa
+dibuka. Detail di §2 (fitur 7–8) dan §3.
+
 ## 1. Aturan resmi yang dibaca (18 Nov 2026, kiroween.devpost.com/rules)
 
 - **Hadiah:** 1st $30.000, 2nd $20.000, 3rd $10.000; Best Resurrection /
@@ -75,6 +80,18 @@ Fitur (semua jalan, bukan mockup):
    request** (terverifikasi grep — tanpa fetch/XHR/CDN/font eksternal);
    aplikasi menolak menyimpan password (catatan berisi pola password
    ditolak dengan peringatan).
+7. **📥 CSV import (v2, 20 Nov 2026)** — tambah banyak akun sekaligus
+   dari file CSV (`service,username,category,importance,wish,heir,notes`).
+   Tiap baris divalidasi seperti akun tunggal (termasuk penolakan password
+   di notes); heir dicocokkan dari nama/email (tidak cocok = jadi ghost,
+   bukan heir palsu); ada tabel PREVIEW sebelum import + template CSV yang
+   bisa diunduh.
+8. **✅ Executor Checklist (v2, 20 Nov 2026)** — dokumen langkah demi
+   langkah untuk ahli waris: langkah pertama, aksi per akun dikelompokkan
+   per wish, pembagian tugas per heir, plus daftar hantu yang belum
+   terselesaikan. Bisa dicetak seperti surat Will, dengan disclaimer yang
+   sama ("dokumen perencanaan, bukan dokumen legal"). Membuat checklist
+   tidak mengubah data yang tersimpan.
 
 **Kategori: Costume Contest.** Alasannya:
 - Aturannya "Build any app" — bebas memilih aplikasi yang paling berguna,
@@ -120,12 +137,20 @@ Juga bisa dengan double-click `index.html` (jalan dari `file://`).
 - `node --check` lolos untuk semua file JS.
 - Zero network requests terverifikasi (grep: tanpa fetch/XHR/WebSocket dan
   tanpa URL eksternal di index.html/css/js).
-- **Yang BELUM bisa diuji di VM ini (jujur):** tampilan visual di browser
-  sungguhan. Chrome terkelola di VM menolak start headless ("Hatch WebGL
-  domain policy is required"), dan unduhan chrome-headless-shell lewat
-  npm timeout 170 detik. Struktur DOM + CSS sudah terverifikasi lewat
-  smoke test, tapi **Mas tolong buka sekali di browser sendiri sebelum
-  merekam video demo** — cek tampilan nisan, dial skor, dan tema gelapnya.
+- **Hasil uji v2 (20 Nov 2026, semua di VM ini):**
+- `node tests/test.js` — **42/42 lolos** (25 v1 + 17 baru: parser CSV,
+  planner import, pencocokan heir, checklist).
+- `tests/smoke-dom.js` (jsdom, aplikasi asli via HTTP) — **31/31 lolos**
+  (21 v1 + 10 baru: import CSV lewat dialog preview, unduh template,
+  generate checklist + disclaimer).
+- `node --check` lolos untuk semua file JS.
+- Zero network requests terverifikasi ulang sesudah perubahan v2 (grep:
+  tanpa fetch/XHR/WebSocket dan tanpa URL eksternal di index.html/css/js).
+- Kompatibilitas v1 terverifikasi: data seed v1 lolos `validateState`,
+  template CSV ter-import di state v1 kosong, checklist jalan di data
+  seed v1 (3 kelompok heir, 4 hantu). Format state tidak berubah
+  (`afterlife.v1`, version 1).
+- **Tampilan visual — ✅ TERVERIFIKASI 18 Nov 2026 ~22:28 WIB:** GitHub Pages hidup di https://achlyss.github.io/afterlife/ dan Mas membuka langsung di browser sendiri (screenshot): header bulan + judul Afterlife, tagline, badge local-first, kartu Haunting Score 0/100, The Graveyard dengan filter Search/Category/Wish + tombol oranye "+ Add an account", empty state benar. Tema gelap rapi, tidak ada layout rusak. (Sebelumnya tidak bisa diuji di VM ini karena Chrome terkelola menolak start headless.)
 
 ## 4. Status pemakaian Kiro (jujur)
 
@@ -152,7 +177,7 @@ Juga bisa dengan double-click `index.html` (jalan dari `file://`).
 - Satu catatan PBT yang dicatat di KIRO-USAGE.md: property test menemukan
   bug window "due" yang lolos dari unit test — bukti nyata pemakaian PBT.
 
-## 5. Isi proyek (`~/workspace/hackathons/kiroween-2026/`, 22 file, 1.926 baris)
+## 5. Isi proyek (`~/workspace/hackathons/kiroween-2026/`, 26 file, 3.899 baris)
 
 | File | Isi |
 |---|---|
@@ -166,6 +191,7 @@ Juga bisa dengan double-click `index.html` (jalan dari `file://`).
 | `tests/run-tests.sh` | Pelari test |
 | `.kiro/steering/` | product.md, tech.md, structure.md |
 | `.kiro/specs/afterlife/` | requirements.md, design.md, tasks.md |
+| `.kiro/specs/afterlife-v2/` | requirements.md (R9–R10), design.md, tasks.md (v2, 20 Nov 2026) |
 | `.kiro/hooks/`, `.kiro/settings/`, `.kiro/agents/` | Hook test, MCP, custom agent |
 | `README.md` | Dokumen repo (Inggris, untuk juri) |
 | `DEMO-SCRIPT.md` | Naskah video demo 2 menit (Inggris) |
@@ -178,7 +204,8 @@ Juga bisa dengan double-click `index.html` (jalan dari `file://`).
 |---|---|---|---|
 | (a) | **Minta 4.000 kredit Kiro gratis** — ✅ **TERKIRIM 18 Nov 2026 ~22:15 WIB** ("Your response has been recorded"); review sampai 48 jam kerja; redeem sebelum 4 Des | **SEBELUM 2 Des 2026 03:00 WIB** (1 Des 12:00 PM PT; review 48 jam kerja; redeem sebelum 4 Des) | Daftar dulu di Devpost (b), lalu isi Credit Request Form di tab Resources kiroween.devpost.com — sertakan Kiro user ID / AWS account ID + detail proyek. Tanpa ini, iterasi lanjutan pakai Kiro CLI harus bayar sendiri. |
 | (b) | **Daftar di Devpost** (klik "Join Hackathon") — ✅ **SELESAI 18 Nov 2026 ~22:09 WIB** ("Thanks for registering!"; kategori Costume Contest) | Sebelum submit; lakukan SEKARANG supaya bisa minta kredit | https://kiroween.devpost.com/ — butuh akun Devpost gratis (atau login). Pilih kategori **Costume Contest**. |
-| (c) | **Buat repo GitHub publik `achlyss/afterlife`** dan push kode | Sebelum submit (lakukan sesudah (b)) | Buat repo publik di github.com/achlyss (nama saran: `afterlife`), tambahkan file LICENSE (sudah ada) supaya terdeteksi open source, lalu push isi folder `~/workspace/hackathons/kiroween-2026/` apa adanya (jangan ubah struktur; `.kiro/` WAJIB ikut — sudah dijamin `.gitignore` tidak meng-ignore-nya). Jangan push dari sebelum 30 Okt — semua file ini baru dibuat 18 Nov, aman. |
+| (c) | **Buat repo GitHub publik `achlyss/afterlife`** dan push kode — ✅ **SELESAI 18 Nov 2026 ~22:21 WIB**: https://github.com/achlyss/afterlife — commit 86c350e, 23 file, `.kiro/` lengkap terverifikasi via API GitHub. PAT sementara sudah dipakai sekali untuk push lalu dihapus dari mesin (revoke di GitHub oleh user). | Sebelum submit (lakukan sesudah (b)) | Buat repo publik di github.com/achlyss (nama saran: `afterlife`), tambahkan file LICENSE (sudah ada) supaya terdeteksi open source, lalu push isi folder `~/workspace/hackathons/kiroween-2026/` apa adanya (jangan ubah struktur; `.kiro/` WAJIB ikut — sudah dijamin `.gitignore` tidak meng-ignore-nya). Jangan push dari sebelum 30 Okt — semua file ini baru dibuat 18 Nov, aman. |
+| (c2) | **Nyalakan GitHub Pages + cek visual** — ✅ **SELESAI 18 Nov 2026 ~22:28 WIB**: Pages hidup di https://achlyss.github.io/afterlife/ (branch main, root); Mas cek langsung di browser — tampilan benar semua (header bulan, Haunting Score 0/100, Graveyard + filter, tombol "+ Add an account"). | Sebelum rekam video demo | Settings → Pages → Deploy from a branch → main + / (root) → Save; tunggu ~1 menit; buka URL-nya. |
 | (d) | **Submit di Devpost** | **SEBELUM 5 Des 2026 05:00 WIB** (4 Des 2:00 PM PT) | Isi form "Enter a Submission": kategori Costume Contest, URL repo GitHub, URL aplikasi yang jalan (hosting statis gratis — GitHub Pages/Netlify/Vercel; aplikasi ini file statis, tanpa backend), deskripsi, **video demo YouTube publik (< 3 menit, pakai `DEMO-SCRIPT.md`)**, write-up Kiro (salin dari `KIRO-USAGE.md`). Centang juga Bonus Blog + Social Blitz bila Mas posting blog/sosial dengan hashtag `#KiroweenHackathon26` di awal post. |
 
 **Urutan yang disarankan:** (b) daftar hari ini → (a) minta kredit sebelum 2 Des 03:00 WIB → (c) buat repo + push → rekam video demo (pakai `DEMO-SCRIPT.md`, ~2 menit) + upload ke YouTube publik → (d) submit sebelum 5 Des 05:00 WIB. Bila sempat, login Kiro CLI (`kiro-cli login`) sesudah (a) dan biarkan Kiro membaca `.kiro/` untuk iterasi polish sebelum submit.

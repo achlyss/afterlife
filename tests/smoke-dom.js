@@ -118,6 +118,47 @@ function check(name, cond, extra) {
   check('release screen names an heir',
     /Ana Rahmani/.test(document.getElementById('release-body').textContent));
 
+  // v2: CSV import through the preview dialog
+  const csvText = 'service,username,category,importance,wish,heir,notes\n' +
+    'Discord,maya.plays,entertainment,2,delete,,\n' +
+    'Bad,baduser,bogus,3,delete,,\n';
+  const csvFile = new window.File([csvText], 'import.csv', { type: 'text/csv' });
+  const csvInput = document.getElementById('csv-file');
+  Object.defineProperty(csvInput, 'files', { value: [csvFile], configurable: true });
+  csvInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+  await new Promise((r) => setTimeout(r, 500)); // let FileReader finish
+  check('CSV preview dialog opens',
+    document.getElementById('csv-dialog').open === true);
+  check('CSV preview shows 1 valid row',
+    document.querySelectorAll('#csv-preview-body tr').length === 1,
+    'got ' + document.querySelectorAll('#csv-preview-body tr').length);
+  check('CSV preview lists 1 skipped row with the reason',
+    document.querySelectorAll('#csv-skipped-list li').length === 1 &&
+    /bogus|category/i.test(document.getElementById('csv-skipped-list').textContent));
+  check('CSV confirm button says "Import 1 account"',
+    /Import 1 account/.test(document.getElementById('csv-confirm-btn').textContent));
+  document.getElementById('csv-confirm-btn').click();
+  check('CSV dialog closes after import',
+    document.getElementById('csv-dialog').open === false);
+  check('10 tombstones after CSV import (9 + 1 valid row)',
+    document.querySelectorAll('.grave-card').length === 10,
+    'got ' + document.querySelectorAll('.grave-card').length);
+
+  // v2: CSV template download does not throw
+  let threwTemplate = null;
+  try { document.getElementById('csv-template-btn').click(); } catch (e) { threwTemplate = e; }
+  check('CSV template download click does not throw', threwTemplate === null, threwTemplate && threwTemplate.message);
+
+  // v2: executor checklist
+  document.getElementById('generate-checklist').click();
+  const clEl = document.getElementById('checklist-output');
+  check('checklist output shown', clEl.style.display === 'block');
+  check('checklist contains disclaimer + heir + account',
+    /NOT a legal/.test(clEl.textContent) && /Ana Rahmani/.test(clEl.textContent) &&
+    /EXECUTOR CHECKLIST/.test(clEl.textContent) && /Discord/.test(clEl.textContent));
+  check('checklist print button appears',
+    document.getElementById('print-checklist').style.display !== 'none');
+
   // Encrypted export graceful fallback in jsdom (no crypto.subtle)
   check('encrypted export disabled without secure context, note shown',
     document.getElementById('export-encrypted').disabled === true &&
@@ -130,8 +171,8 @@ function check(name, cond, extra) {
 
   // localStorage persisted
   const saved = JSON.parse(window.localStorage.getItem('afterlife.v1'));
-  check('state persisted to localStorage (9 accounts)',
-    saved && saved.accounts.length === 9, saved && ('accounts: ' + saved.accounts.length));
+  check('state persisted to localStorage (10 accounts)',
+    saved && saved.accounts.length === 10, saved && ('accounts: ' + saved.accounts.length));
 
   console.log('\n' + pass + ' passed, ' + fail + ' failed.');
   process.exit(fail ? 1 : 0);

@@ -235,6 +235,21 @@ label > input, label > select, label > textarea { margin-top: 0.25em; }
 .vault-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; display: flex; flex-direction: column; gap: 0.5rem; }
 .vault-card h3 { margin-bottom: 0; }
 
+/* ---------- CSV import (v2) ---------- */
+
+.csv-import { margin: 1rem 0; display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+.csv-import .fine-print { flex: 1 1 100%; margin: 0; }
+.csv-preview { overflow-x: auto; margin: 0.8rem 0; border: 1px solid var(--line); border-radius: 10px; }
+.csv-preview table { border-collapse: collapse; width: 100%; font-size: 0.88rem; min-width: 560px; }
+.csv-preview th, .csv-preview td { text-align: left; padding: 0.45em 0.7em; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.csv-preview th { color: var(--gold); font-weight: 600; }
+.csv-preview tr:last-child td { border-bottom: none; }
+.csv-status--ok { color: #b7d3a6; }
+.csv-status--warn { color: #f4b27a; }
+.csv-skipped { color: #ff9d9d; font-size: 0.88rem; margin: 0.4em 0; padding-left: 1.2em; }
+
+.dialog--wide { max-width: 760px; }
+
 /* ---------- dialog, toast, footer ---------- */
 
 .dialog {
@@ -260,17 +275,24 @@ label > input, label > select, label > textarea { margin-top: 0.25em; }
   border-top: 1px solid var(--line);
 }
 
-/* ---------- print: only the will letter ---------- */
+/* ---------- print: only the will letter or the checklist ---------- */
 
 @media print {
   body { background: #fff; color: #000; }
   .fog, .site-header, main > section:not(#heirs), .site-footer, .toast,
-  .will-box > *:not(#will-output), #heir-form, #heir-list, #heir-empty { display: none !important; }
-  body.printing-will #heirs { display: block; }
+  #heir-form, #heir-list, #heir-empty { display: none !important; }
+  body.printing-will #heirs, body.printing-checklist #heirs { display: block; }
   body.printing-will #heirs h2, body.printing-will #heirs .section-intro,
-  body.printing-will .will-box h3, body.printing-will .will-box .fine-print,
-  body.printing-will #generate-will, body.printing-will #print-will { display: none !important; }
+  body.printing-checklist #heirs h2, body.printing-checklist #heirs .section-intro { display: none !important; }
+  body.printing-will #checklist-box { display: none !important; }
+  body.printing-will #will-box > *:not(#will-output) { display: none !important; }
   body.printing-will #will-output {
+    display: block !important; border: 1px solid #999;
+    background: #fff; color: #000;
+  }
+  body.printing-checklist #will-box { display: none !important; }
+  body.printing-checklist #checklist-box > *:not(#checklist-output) { display: none !important; }
+  body.printing-checklist #checklist-output {
     display: block !important; border: 1px solid #999;
     background: #fff; color: #000;
   }
@@ -283,4 +305,22 @@ label > input, label > select, label > textarea { margin-top: 0.25em; }
   .moon { font-size: 3rem; }
   .score-card { flex-basis: 100%; }
   .filters label { flex-basis: 100%; }
+  .grave-grid { grid-template-columns: 1fr; }
+  .seance-moon { font-size: 3rem; }
+  .seance-controls { flex-basis: 100%; }
+  .vault-card .btn { width: 100%; }
+  .dialog { padding: 1rem; }
+  .csv-import .btn { flex: 1 1 auto; }
+}
+
+@media (max-width: 480px) {
+  .site-header { padding: 1.4rem 0.9rem 0.6rem; gap: 0.9rem; }
+  .site-header__text h1 { font-size: 1.9rem; }
+  .moon { font-size: 2.6rem; }
+  .tagline { font-size: 1rem; }
+  main { padding: 0.5rem 0.9rem 1.5rem; }
+  section { margin: 1.8rem 0; }
+  h2 { font-size: 1.35rem; }
+  .btn--big { width: 100%; text-align: center; }
+  .grave-stone { padding: 1rem 0.8rem 0.7rem; }
 }

@@ -70,6 +70,43 @@ AI agent (Muse) following Kiro's spec-driven methodology and the
 entrant's authenticated session for iteration after submission (steering
 docs, specs, hooks, and MCP config all load directly into Kiro CLI/IDE).
 
+## Afterlife v2 (20 Nov 2026)
+
+v2 adds two features, built the same spec-first way as v1:
+
+1. **New spec** (`.kiro/specs/afterlife-v2/`): `requirements.md` (EARS
+   requirements R9 CSV import, R10 Executor Checklist), `design.md`
+   (CSV parser/planner design, checklist shape, UI flows, print CSS),
+   `tasks.md` (implementation checklist, worked top to bottom).
+2. **CSV import (R9)** — bulk-add accounts from a CSV file
+   (`service,username,category,importance,wish,heir,notes`): a hand-rolled
+   RFC 4180 subset parser (quoted fields, `""` escapes, CRLF/LF, BOM),
+   per-row validation with the same rules as a single account (including
+   the password-in-notes refusal), heir matching by name or email
+   (case-insensitive; unmatched heir → ghost, never an invented heir),
+   and a preview dialog so the user confirms before anything is saved.
+   A downloadable CSV template is included.
+3. **Executor Checklist (R10)** — a step-by-step document for the heirs,
+   generated from the plan: first steps, actions per account grouped by
+   wish, work divided per heir, and unresolved ghosts listed honestly.
+   Printable like the will letter, with the same "planning document, not
+   a legal document" disclaimer. Generating it does not change the stored
+   state.
+4. **CSS polish** — better mobile responsiveness (single-column grid and
+   full-width vault buttons at ≤640px, a ≤480px breakpoint, horizontally
+   scrolling preview table) and print CSS for the checklist. Same
+   graveyard theme; no structural HTML changes.
+5. **Tests** — 17 new unit tests (parser, planner, heir matching,
+   checklist) and 10 new DOM smoke checks (CSV import through the
+   dialog, checklist generation). Totals are now **42 unit + property
+   tests** and **31 DOM checks**, all passing. The v1 state format is
+   unchanged (`afterlife.v1`, version 1): a plan saved by v1 loads
+   unchanged in v2, verified against the v1 seed data.
+
+The two-layer architecture was kept throughout: all new rules live in
+`js/logic.js` (pure, UMD, tested in Node); `js/app.js` only wires the
+DOM. Zero network requests was re-verified by grep after the v2 changes.
+
 ## What was NOT used
 - **Kiro Crew**: not used — this is a solo build, and Crew's multi-agent
   sessions need an authenticated session.
@@ -81,7 +118,8 @@ docs, specs, hooks, and MCP config all load directly into Kiro CLI/IDE).
 ## Proof in the repo
 - `.kiro/steering/` — 3 steering docs
 - `.kiro/specs/afterlife/` — requirements, design, tasks (tasks checked off)
+- `.kiro/specs/afterlife-v2/` — requirements (R9–R10), design, tasks (v2)
 - `.kiro/hooks/on-save-run-tests.json`, `.kiro/settings/mcp.json`,
   `.kiro/agents/graveyard-keeper.md`
-- `tests/test.js` — 25 tests (unit + property), all passing
-- `tests/smoke-dom.js` — 21 DOM checks against the running app
+- `tests/test.js` — 42 tests (unit + property), all passing
+- `tests/smoke-dom.js` — 31 DOM checks against the running app

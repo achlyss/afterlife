@@ -231,7 +231,97 @@
   }
   window.addEventListener('afterprint', function () {
     document.body.classList.remove('printing-will');
+    document.body.classList.remove('printing-checklist');
   });
+
+  /* ---------- executor checklist (R10) ---------- */
+
+  function generateChecklist() {
+    var text = L.formatExecutorChecklist(state);
+    var out = $('checklist-output');
+    out.textContent = text;
+    out.style.display = 'block';
+    $('print-checklist').style.display = 'inline-block';
+    toast('Your executor checklist is ready. ✅');
+  }
+
+  function printChecklist() {
+    document.body.classList.add('printing-checklist');
+    window.print();
+  }
+
+  /* ---------- CSV import (R9) ---------- */
+
+  var csvPlan = null; // the plan currently shown in the preview dialog
+
+  function openCsvPicker() { $('csv-file').click(); }
+
+  function downloadCsvTemplate() {
+    download('afterlife-template.csv', L.csvTemplate(), 'text/csv');
+    toast('CSV template downloaded. 📄');
+  }
+
+  function onCsvFileChosen(ev) {
+    var file = ev.target.files[0];
+    ev.target.value = ''; // allow picking the same file again
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var plan = L.parseCsvImport(String(reader.result), state);
+      if (plan.valid.length === 0) {
+        // File-level error, or every row failed: show the reasons inline.
+        $('csv-error').textContent = '⚠️ ' + plan.errors.map(function (e) {
+          return (e.line ? 'Line ' + e.line + ': ' : '') + e.reason;
+        }).join(' ');
+        return;
+      }
+      $('csv-error').textContent = '';
+      csvPlan = plan;
+      renderCsvPreview(plan);
+      $('csv-dialog').showModal();
+    };
+    reader.readAsText(file);
+  }
+
+  function renderCsvPreview(plan) {
+    var tbody = $('csv-preview-body');
+    tbody.innerHTML = '';
+    plan.valid.forEach(function (row) {
+      var tr = document.createElement('tr');
+      var cells = [
+        String(row.line),
+        row.input.service,
+        row.input.username,
+        L.CATEGORY_LABELS[row.input.category] || row.input.category,
+        row.input.wish ? L.WISH_LABELS[row.input.wish] : '—',
+        row.heirName || '—'
+      ];
+      cells.forEach(function (c) { tr.appendChild(el('td', '', c)); });
+      var status = row.heirUnmatched ? '⚠️ Valid — heir not found, will be a ghost' : '✅ Valid';
+      tr.appendChild(el('td', row.heirUnmatched ? 'csv-status--warn' : 'csv-status--ok', status));
+      tbody.appendChild(tr);
+    });
+    var skipped = $('csv-skipped-list');
+    skipped.innerHTML = '';
+    plan.errors.forEach(function (e) {
+      skipped.appendChild(el('li', '', 'Line ' + e.line + ': ' + e.reason + ' (not imported)'));
+    });
+    $('csv-preview-summary').textContent =
+      plan.valid.length + ' valid row' + (plan.valid.length === 1 ? '' : 's') +
+      ' · ' + plan.errors.length + ' row' + (plan.errors.length === 1 ? '' : 's') + ' with problems.';
+    var confirm = $('csv-confirm-btn');
+    confirm.textContent = 'Import ' + plan.valid.length + ' account' + (plan.valid.length === 1 ? '' : 's');
+    confirm.disabled = plan.valid.length === 0;
+  }
+
+  function confirmCsvImport() {
+    if (!csvPlan || csvPlan.valid.length === 0) return;
+    var res = L.importCsvAccounts(state, csvPlan.valid);
+    save(); renderAll();
+    $('csv-dialog').close();
+    csvPlan = null;
+    toast('Imported ' + res.added + ' account' + (res.added === 1 ? '' : 's') + ' from CSV. 🪦');
+  }
 
   /* ---------- séance ---------- */
 
@@ -406,6 +496,13 @@
     $('heir-form').addEventListener('submit', submitHeirForm);
     $('generate-will').addEventListener('click', generateWill);
     $('print-will').addEventListener('click', printWill);
+    $('generate-checklist').addEventListener('click', generateChecklist);
+    $('print-checklist').addEventListener('click', printChecklist);
+    $('csv-import-btn').addEventListener('click', openCsvPicker);
+    $('csv-file').addEventListener('change', onCsvFileChosen);
+    $('csv-template-btn').addEventListener('click', downloadCsvTemplate);
+    $('csv-confirm-btn').addEventListener('click', confirmCsvImport);
+    $('csv-cancel-btn').addEventListener('click', function () { $('csv-dialog').close(); csvPlan = null; });
     $('seance-interval').addEventListener('change', function (e) {
       var days = parseInt(e.target.value, 10);
       if (!days) return;

@@ -189,6 +189,204 @@
     });
   }
 
+  /* ---------- CSV import (R9) ---------- */
+
+  var CSV_HEADER = ['service', 'username', 'category', 'importance', 'wish', 'heir', 'notes'];
+
+  function recordIsEmpty(rec) {
+    return rec.fields.every(function (f) { return String(f).trim() === ''; });
+  }
+
+  /* Small RFC 4180 subset parser: quoted fields, "" escapes, commas and
+   * newlines inside quotes, CRLF/LF line endings. Returns records with
+   * their starting line number (1-based, header = line 1). An unterminated
+   * quoted field is a whole-file error: records come back empty. */
+  function parseCsv(text) {
+    if (typeof text !== 'string') return { records: [], errors: ['Input is not text.'] };
+    var src = text;
+    if (src.charCodeAt(0) === 0xFEFF) src = src.slice(1); // strip UTF-8 BOM (Excel)
+    var records = [];
+    var errors = [];
+    var fields = [];
+    var field = '';
+    var inQuotes = false;
+    var fieldStart = true;
+    var line = 1;
+    var recordStartLine = 1;
+    var i = 0;
+    while (i < src.length) {
+      var ch = src[i];
+      if (inQuotes) {
+        if (ch === '"') {
+          if (src[i + 1] === '"') { field += '"'; i += 2; }
+          else { inQuotes = false; i++; }
+        } else {
+          if (ch === '\n') line++;
+          field += ch;
+          i++;
+        }
+      } else if (ch === '"' && field === '' && fieldStart) {
+        inQuotes = true;
+        fieldStart = false;
+        i++;
+      } else if (ch === ',') {
+        fields.push(field);
+        field = '';
+        fieldStart = true;
+        i++;
+      } else if (ch === '\n') {
+        fields.push(field);
+        records.push({ line: recordStartLine, fields: fields });
+        fields = [];
+        field = '';
+        line++;
+        recordStartLine = line;
+        fieldStart = true;
+        i++;
+      } else if (ch === '\r') {
+        if (src[i + 1] === '\n') {
+          fields.push(field);
+          records.push({ line: recordStartLine, fields: fields });
+          fields = [];
+          field = '';
+          line++;
+          recordStartLine = line;
+          fieldStart = true;
+          i += 2;
+        } else {
+          field += ch; // lone CR is data, not a line ending
+          fieldStart = false;
+          i++;
+        }
+      } else {
+        field += ch;
+        fieldStart = false;
+        i++;
+      }
+    }
+    if (inQuotes) {
+      return { records: [], errors: ['Unterminated quoted field (a " was opened but never closed). Nothing was imported.'] };
+    }
+    if (field !== '' || fields.length > 0) {
+      fields.push(field);
+      records.push({ line: recordStartLine, fields: fields });
+    }
+    return { records: records, errors: errors };
+  }
+
+  function findHeirByNameOrEmail(state, value) {
+    if (!value) return null;
+    var v = String(value).trim().toLowerCase();
+    if (!v) return null;
+    for (var i = 0; i < state.heirs.length; i++) {
+      var h = state.heirs[i];
+      if (h.name && String(h.name).trim().toLowerCase() === v) return h;
+      if (h.email && String(h.email).trim().toLowerCase() === v) return h;
+    }
+    return null;
+  }
+
+  /* Plan a CSV import without touching state. Returns
+   * { valid: [{ line, input, heirId, heirName, heirUnmatched }],
+   *   errors: [{ line, reason }] }.
+   * File-level errors use line 0. Nothing is saved here. */
+  function parseCsvImport(text, state) {
+    var parsed = parseCsv(text);
+    if (parsed.errors.length > 0) {
+      return {
+        valid: [],
+        errors: parsed.errors.map(function (e) { return { line: 0, reason: e }; })
+      };
+    }
+    var records = parsed.records;
+    var headerIdx = -1;
+    for (var i = 0; i < records.length; i++) {
+      if (!recordIsEmpty(records[i])) { headerIdx = i; break; }
+    }
+    if (headerIdx === -1) {
+      return {
+        valid: [],
+        errors: [{ line: 0, reason: 'The file is empty — no header row found. Expected header: ' + CSV_HEADER.join(',') + '.' }]
+      };
+    }
+    var header = records[headerIdx].fields.map(function (f) { return String(f).trim().toLowerCase(); });
+    var colIndex = {};
+    var missing = [];
+    CSV_HEADER.forEach(function (name) {
+      var idx = header.indexOf(name);
+      if (idx === -1) missing.push(name);
+      else colIndex[name] = idx;
+    });
+    if (missing.length > 0) {
+      return {
+        valid: [],
+        errors: [{ line: records[headerIdx].line, reason: 'Missing column(s) in header: ' + missing.join(', ') + '. Expected header: ' + CSV_HEADER.join(',') + '.' }]
+      };
+    }
+    var valid = [];
+    var errors = [];
+    for (var j = headerIdx + 1; j < records.length; j++) {
+      var rec = records[j];
+      if (recordIsEmpty(rec)) continue;
+      var line = rec.line;
+      if (rec.fields.length !== header.length) {
+        errors.push({ line: line, reason: 'Expected ' + header.length + ' columns, got ' + rec.fields.length + '.' });
+        continue;
+      }
+      var get = function (name) { return (rec.fields[colIndex[name]] || '').trim(); };
+      var importanceRaw = get('importance');
+      var importance;
+      if (importanceRaw === '') {
+        importance = undefined;
+      } else if (/^-?\d+$/.test(importanceRaw)) {
+        importance = parseInt(importanceRaw, 10);
+      } else {
+        errors.push({ line: line, reason: 'Importance must be a whole number 1–5.' });
+        continue;
+      }
+      var heirRaw = get('heir');
+      var heir = null;
+      var heirUnmatched = false;
+      if (heirRaw !== '') {
+        heir = findHeirByNameOrEmail(state, heirRaw);
+        if (!heir) heirUnmatched = true;
+      }
+      var input = {
+        service: get('service'),
+        username: get('username'),
+        category: get('category') || 'other',
+        importance: importance,
+        wish: get('wish') || null,
+        heirId: heir ? heir.id : null,
+        notes: get('notes')
+      };
+      var err = validateAccountInput(input);
+      if (err) {
+        errors.push({ line: line, reason: err });
+        continue;
+      }
+      valid.push({ line: line, input: input, heirId: input.heirId, heirName: heir ? heir.name : null, heirUnmatched: heirUnmatched });
+    }
+    return { valid: valid, errors: errors };
+  }
+
+  function importCsvAccounts(state, validRows) {
+    var added = [];
+    var errors = [];
+    validRows.forEach(function (row) {
+      var res = addAccount(state, row.input);
+      if (res.ok) added.push(res.account);
+      else errors.push({ line: row.line, reason: res.error });
+    });
+    return { added: added.length, accounts: added, errors: errors };
+  }
+
+  function csvTemplate() {
+    return 'service,username,category,importance,wish,heir,notes\n' +
+      'Gmail,me@example.com,social,5,transfer,Ana,"Give the family photos to Ana, then delete the rest."\n' +
+      'Netflix,me@example.com,entertainment,1,delete,,"Just cancel the subscription."\n';
+  }
+
   /* ---------- heirs ---------- */
 
   function addHeir(state, input) {
@@ -351,6 +549,126 @@
     return lines.join('\n');
   }
 
+  /* ---------- Executor Checklist (R10) ---------- */
+
+  /* Structured checklist for the heirs. A derived view: it never mutates
+   * state and never affects the Haunting Score. */
+  function generateExecutorChecklist(state) {
+    var byWish = { delete: [], memorialize: [], transfer: [], keep: [], none: [] };
+    var byHeirMap = {};
+    var heirOrder = [];
+    var ghosts = [];
+    state.accounts.forEach(function (a) {
+      var heir = heirById(state, a.heirId);
+      var entry = {
+        service: a.service, username: a.username,
+        wish: a.wish || null, heirName: heir ? heir.name : null,
+        notes: a.notes || ''
+      };
+      (a.wish ? byWish[a.wish] : byWish.none).push(entry);
+      var key = heir ? heir.id : null;
+      if (!byHeirMap[key]) { byHeirMap[key] = { heir: heir, accounts: [] }; heirOrder.push(key); }
+      byHeirMap[key].accounts.push({
+        service: a.service, username: a.username,
+        wish: a.wish || null, notes: a.notes || ''
+      });
+      if (isGhost(state, a)) ghosts.push(entry);
+    });
+    var byHeir = heirOrder.map(function (k) { return byHeirMap[k]; });
+    byHeir.sort(function (x, y) {
+      if (!x.heir && !y.heir) return 0;
+      if (!x.heir) return 1;
+      if (!y.heir) return -1;
+      return state.heirs.indexOf(x.heir) - state.heirs.indexOf(y.heir);
+    });
+    var firstSteps = [];
+    if (state.accounts.length === 0 && state.heirs.length === 0) {
+      firstSteps.push('This plan is empty — there is nothing to carry out yet.');
+      firstSteps.push('First, add accounts to the graveyard and name an heir. Then generate the legacy letter (The Will).');
+    } else {
+      if (state.heirs.length === 0) {
+        firstSteps.push('Name an heir first — without one, nobody can act on this plan.');
+      } else {
+        var first = state.heirs[0];
+        firstSteps.push('Contact ' + first.name + ' (' + first.email + ')' + (first.phone ? ' — ' + first.phone : '') + ' first. They are the first person named in this plan.');
+      }
+      firstSteps.push('Read the legacy letter (The Will) — it lists every account, every wish, and every heir.');
+      firstSteps.push('Find the encrypted Afterlife backup — ask the family where it is kept (a USB stick, a safe, or a trusted person). It holds the full plan.');
+      firstSteps.push('Check the Séance status: if the plan was released, follow the release instructions shown in the app.');
+      if (ghosts.length > 0) {
+        firstSteps.push('Resolve ' + ghosts.length + ' ghost' + (ghosts.length === 1 ? '' : 's') + ' first — these accounts have no wish or no heir, so there is no instruction for them yet.');
+      }
+    }
+    return { generatedAt: nowIso(), firstSteps: firstSteps, byWish: byWish, byHeir: byHeir, ghosts: ghosts };
+  }
+
+  /* Printable plain-text rendering of the checklist (like the will
+   * letter). Does not mutate state. */
+  function formatExecutorChecklist(state) {
+    var c = generateExecutorChecklist(state);
+    var lines = [];
+    var date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    lines.push('EXECUTOR CHECKLIST — WHAT TO DO, STEP BY STEP');
+    lines.push('Prepared with Afterlife on ' + date + '.');
+    lines.push('');
+    lines.push('This checklist is a personal planning document. It is NOT a legal');
+    lines.push('document and does not replace legal advice or a legally executed will.');
+    lines.push('');
+    lines.push('FIRST STEPS');
+    c.firstSteps.forEach(function (s, i) { lines.push('  ' + (i + 1) + '. ' + s); });
+    lines.push('');
+    lines.push('ACTIONS PER ACCOUNT — GROUPED BY WISH');
+    var wishOrder = ['delete', 'memorialize', 'transfer', 'keep', 'none'];
+    var wishHeadings = {
+      delete: 'DELETE', memorialize: 'MEMORIALIZE', transfer: 'TRANSFER TO HEIR',
+      keep: 'LEAVE AS IS', none: 'NO WISH SET'
+    };
+    wishOrder.forEach(function (w) {
+      var list = c.byWish[w];
+      lines.push('  ' + wishHeadings[w] + ' (' + list.length + ')');
+      if (list.length === 0) {
+        lines.push('    (None.)');
+      } else {
+        list.forEach(function (a) {
+          lines.push('    - ' + a.service + ' (' + a.username + ')' +
+            (a.heirName ? ' — heir: ' + a.heirName : ' — no heir assigned') +
+            (a.notes ? ' — ' + a.notes : ''));
+        });
+      }
+    });
+    lines.push('');
+    lines.push('WORK PER HEIR');
+    if (c.byHeir.length === 0) {
+      lines.push('  (No accounts listed yet.)');
+    } else {
+      c.byHeir.forEach(function (group) {
+        var label = group.heir ? group.heir.name + ' (' + group.heir.email + ')' : 'No heir assigned';
+        lines.push('  ' + label + ' — ' + group.accounts.length + ' account' + (group.accounts.length === 1 ? '' : 's'));
+        group.accounts.forEach(function (a) {
+          lines.push('    - ' + a.service + ' (' + a.username + ') — ' +
+            (a.wish ? WISH_LABELS[a.wish] : 'no wish set') +
+            (a.notes ? ' — ' + a.notes : ''));
+        });
+      });
+    }
+    lines.push('');
+    lines.push('UNRESOLVED GHOSTS (' + c.ghosts.length + ')');
+    if (c.ghosts.length === 0) {
+      lines.push('  None — every account has a wish and an heir.');
+    } else {
+      c.ghosts.forEach(function (a) {
+        var why = [];
+        if (!a.wish) why.push('no wish');
+        if (!a.heirName) why.push('no heir');
+        lines.push('  - ' + a.service + ' (' + a.username + ') — ' + why.join(' and ') + '. No instruction exists for this account yet.');
+      });
+    }
+    lines.push('');
+    lines.push('— End of checklist. Keep this with the legacy letter, and keep');
+    lines.push('  the encrypted Afterlife backup somewhere safe.');
+    return lines.join('\n');
+  }
+
   /* ---------- Crypto (R6) ---------- */
 
   function getSubtle() {
@@ -483,6 +801,12 @@
     deleteAccount: deleteAccount,
     isGhost: isGhost,
     filterAccounts: filterAccounts,
+    CSV_HEADER: CSV_HEADER,
+    parseCsv: parseCsv,
+    findHeirByNameOrEmail: findHeirByNameOrEmail,
+    parseCsvImport: parseCsvImport,
+    importCsvAccounts: importCsvAccounts,
+    csvTemplate: csvTemplate,
     addHeir: addHeir,
     deleteHeir: deleteHeir,
     heirById: heirById,
@@ -494,6 +818,8 @@
     checkInNow: checkInNow,
     nextCheckInAt: nextCheckInAt,
     generateWillText: generateWillText,
+    generateExecutorChecklist: generateExecutorChecklist,
+    formatExecutorChecklist: formatExecutorChecklist,
     getSubtle: getSubtle,
     exportEncrypted: exportEncrypted,
     importEncrypted: importEncrypted,

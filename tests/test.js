@@ -205,6 +205,189 @@ async function main() {
     assert.ok(s.meta.willGeneratedAt);
   });
 
+  console.log('— CSV import (R9)');
+  const CSV_HEADER_LINE = 'service,username,category,importance,wish,heir,notes';
+  await test('parseCsv: basic rows + header', () => {
+    const r = L.parseCsv(CSV_HEADER_LINE + '\nGmail,u1,social,3,delete,,\nNetflix,u2,entertainment,1,delete,,');
+    assert.strictEqual(r.errors.length, 0);
+    assert.strictEqual(r.records.length, 3);
+    assert.deepStrictEqual(r.records[0].fields, ['service', 'username', 'category', 'importance', 'wish', 'heir', 'notes']);
+    assert.strictEqual(r.records[1].line, 2);
+    assert.deepStrictEqual(r.records[2].fields, ['Netflix', 'u2', 'entertainment', '1', 'delete', '', '']);
+  });
+  await test('parseCsv: quoted commas + doubled quotes + quoted newline', () => {
+    const r = L.parseCsv(CSV_HEADER_LINE + '\nGmail,u1,social,3,delete,,"Give photos to Ana, then delete."\nSteam,gamer,entertainment,2,keep,,"Say ""hi"" to Ana"\nA,u,social,3,delete,,"line one\nline two"\nB,u2,social,3,delete,,');
+    assert.strictEqual(r.errors.length, 0, r.errors.join('; '));
+    assert.strictEqual(r.records[1].fields[6], 'Give photos to Ana, then delete.');
+    assert.strictEqual(r.records[2].fields[6], 'Say "hi" to Ana');
+    assert.strictEqual(r.records[3].fields[6], 'line one\nline two');
+    assert.strictEqual(r.records[3].line, 4);
+    assert.strictEqual(r.records[4].line, 6); // the quoted newline consumed line 5
+  });
+  await test('parseCsv: CRLF endings + BOM + empty lines', () => {
+    const r = L.parseCsv('\uFEFF' + CSV_HEADER_LINE + '\r\nGmail,u1,social,3,delete,,\r\n\r\nNetflix,u2,entertainment,1,delete,,\r\n');
+    assert.strictEqual(r.errors.length, 0);
+    assert.strictEqual(r.records[0].fields[0], 'service'); // BOM stripped
+    assert.strictEqual(r.records[1].fields[0], 'Gmail');
+    assert.strictEqual(r.records[2].fields.length, 1); // the empty line is one empty field
+    assert.strictEqual(r.records[3].fields[0], 'Netflix');
+  });
+  await test('parseCsv: unterminated quote is a file error', () => {
+    const r = L.parseCsv(CSV_HEADER_LINE + '\nGmail,u1,social,3,delete,,"never closed');
+    assert.strictEqual(r.records.length, 0);
+    assert.strictEqual(r.errors.length, 1);
+    assert.ok(/Unterminated/.test(r.errors[0]));
+  });
+  await test('parseCsvImport: valid rows, heir matched by name', () => {
+    const s = stateWith(0, 0, 0); // heir Ana (ana@example.com) exists
+    const csv = CSV_HEADER_LINE + '\nGmail,me@example.com,social,5,transfer,Ana,"Give photos to Ana."\nNetflix,me@example.com,entertainment,1,delete,,';
+    const res = L.parseCsvImport(csv, s);
+    assert.strictEqual(res.errors.length, 0, JSON.stringify(res.errors));
+    assert.strictEqual(res.valid.length, 2);
+    assert.strictEqual(res.valid[0].heirId, 'h1');
+    assert.strictEqual(res.valid[0].heirName, 'Ana');
+    assert.strictEqual(res.valid[0].heirUnmatched, false);
+    assert.strictEqual(res.valid[1].heirId, null);
+    assert.strictEqual(res.valid[0].input.wish, 'transfer');
+    assert.strictEqual(res.valid[0].input.importance, 5);
+  });
+  await test('parseCsvImport: heir matched by email, case-insensitive', () => {
+    const s = stateWith(0, 0, 0);
+    const csv = CSV_HEADER_LINE + '\nGmail,u,social,3,transfer,ANA@EXAMPLE.COM,\nSteam,g,entertainment,2,keep,ana,';
+    const res = L.parseCsvImport(csv, s);
+    assert.strictEqual(res.errors.length, 0, JSON.stringify(res.errors));
+    assert.strictEqual(res.valid[0].heirId, 'h1');
+    assert.strictEqual(res.valid[1].heirId, 'h1'); // lowercase name matches too
+  });
+  await test('parseCsvImport: unmatched heir → null + flag, still valid', () => {
+    const s = stateWith(0, 0, 0);
+    const csv = CSV_HEADER_LINE + '\nGmail,u,social,3,transfer,Stranger,';
+    const res = L.parseCsvImport(csv, s);
+    assert.strictEqual(res.errors.length, 0);
+    assert.strictEqual(res.valid.length, 1);
+    assert.strictEqual(res.valid[0].heirId, null);
+    assert.strictEqual(res.valid[0].heirUnmatched, true);
+  });
+  await test('parseCsvImport: bad header (missing column) rejects the file', () => {
+    const s = L.emptyState();
+    const res = L.parseCsvImport('service,username,category,importance,wish,notes\nGmail,u,social,3,delete,', s);
+    assert.strictEqual(res.valid.length, 0);
+    assert.strictEqual(res.errors.length, 1);
+    assert.ok(/heir/.test(res.errors[0].reason));
+  });
+  await test('parseCsvImport: per-row errors carry line numbers', () => {
+    const s = L.emptyState();
+    const csv = CSV_HEADER_LINE + '\nGmail,u1,social,3,delete,,\n\nBad,baduser,bogus,3,delete,,\nNoUser,,social,3,delete,,\nBadWish,u,social,3,explode,,\nBadImp,u,social,abc,delete,,\nBadImp2,u,social,9,delete,,';
+    const res = L.parseCsvImport(csv, s);
+    assert.strictEqual(res.valid.length, 1, JSON.stringify(res));
+    assert.strictEqual(res.errors.length, 5, JSON.stringify(res.errors));
+    assert.deepStrictEqual(res.errors.map((e) => e.line), [4, 5, 6, 7, 8]);
+    assert.ok(/category/i.test(res.errors[0].reason));
+    assert.ok(/Username is required/.test(res.errors[1].reason));
+    assert.ok(/wish/i.test(res.errors[2].reason));
+    assert.ok(/Importance/.test(res.errors[3].reason));
+    assert.ok(/Importance/.test(res.errors[4].reason));
+  });
+  await test('parseCsvImport: password in notes rejected, field-count mismatch', () => {
+    const s = L.emptyState();
+    const csv = CSV_HEADER_LINE + '\nGmail,u,social,3,delete,,"password: hunter2"\nShort,u,social,3,delete';
+    const res = L.parseCsvImport(csv, s);
+    assert.strictEqual(res.valid.length, 0);
+    assert.strictEqual(res.errors.length, 2);
+    assert.ok(/password/i.test(res.errors[0].reason));
+    assert.ok(/columns/.test(res.errors[1].reason));
+  });
+  await test('parseCsvImport: empty file is a file error', () => {
+    const res = L.parseCsvImport('', L.emptyState());
+    assert.strictEqual(res.valid.length, 0);
+    assert.strictEqual(res.errors.length, 1);
+    assert.strictEqual(res.errors[0].line, 0);
+  });
+  await test('csvTemplate has the header + example rows', () => {
+    const t = L.csvTemplate();
+    assert.ok(t.startsWith(CSV_HEADER_LINE + '\n'));
+    assert.ok(/Gmail/.test(t) && /Netflix/.test(t));
+    const res = L.parseCsvImport(t, stateWith(0, 0, 0));
+    assert.strictEqual(res.errors.length, 0, JSON.stringify(res.errors));
+    assert.strictEqual(res.valid.length, 2);
+  });
+  await test('importCsvAccounts: adds only valid rows', () => {
+    const s = stateWith(0, 0, 0);
+    const csv = CSV_HEADER_LINE + '\nGmail,u1,social,3,delete,,\nBad,baduser,bogus,3,delete,,\nSteam,gamer,entertainment,2,keep,Ana,';
+    const plan = L.parseCsvImport(csv, s);
+    assert.strictEqual(plan.valid.length, 2);
+    const res = L.importCsvAccounts(s, plan.valid);
+    assert.strictEqual(res.added, 2);
+    assert.strictEqual(res.errors.length, 0);
+    assert.strictEqual(s.accounts.length, 2);
+    assert.strictEqual(s.accounts[1].heirId, 'h1');
+    assert.strictEqual(L.validateState(s), true);
+    const empty = L.importCsvAccounts(s, []);
+    assert.strictEqual(empty.added, 0);
+    assert.strictEqual(s.accounts.length, 2);
+  });
+
+  console.log('— executor checklist (R10)');
+  function checklistState() {
+    const s = L.emptyState();
+    s.heirs.push(
+      { id: 'h1', name: 'Ana', relationship: 'Sister', email: 'ana@example.com', phone: '', createdAt: '2026-01-01T00:00:00.000Z' },
+      { id: 'h2', name: 'Budi', relationship: 'Husband', email: 'budi@example.com', phone: '+62 800', createdAt: '2026-01-01T00:00:00.000Z' }
+    );
+    s.accounts.push(
+      { id: 'a1', service: 'Gmail', username: 'u1', category: 'social', importance: 5, wish: 'transfer', heirId: 'h1', notes: 'Photos to Ana.', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+      { id: 'a2', service: 'Instagram', username: 'u2', category: 'social', importance: 3, wish: 'memorialize', heirId: 'h1', notes: '', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+      { id: 'a3', service: 'Bank', username: 'u3', category: 'money', importance: 5, wish: 'transfer', heirId: 'h2', notes: '', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+      { id: 'a4', service: 'Netflix', username: 'u4', category: 'entertainment', importance: 1, wish: 'delete', heirId: null, notes: '', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' },
+      { id: 'a5', service: 'Steam', username: 'u5', category: 'entertainment', importance: 2, wish: null, heirId: null, notes: '', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' }
+    );
+    return s;
+  }
+  await test('generateExecutorChecklist: first steps name the first heir', () => {
+    const c = L.generateExecutorChecklist(checklistState());
+    assert.ok(/Ana/.test(c.firstSteps[0]) && /ana@example.com/.test(c.firstSteps[0]));
+    assert.ok(c.firstSteps.some((s) => /legacy letter/i.test(s)));
+    assert.ok(c.firstSteps.some((s) => /backup/i.test(s)));
+    assert.ok(c.firstSteps.some((s) => /ghost/i.test(s))); // 2 ghosts: a4 (no heir), a5 (no wish, no heir)
+  });
+  await test('generateExecutorChecklist: grouped by wish + per heir + ghosts', () => {
+    const c = L.generateExecutorChecklist(checklistState());
+    assert.strictEqual(c.byWish.transfer.length, 2);
+    assert.strictEqual(c.byWish.memorialize.length, 1);
+    assert.strictEqual(c.byWish.delete.length, 1);
+    assert.strictEqual(c.byWish.keep.length, 0);
+    assert.strictEqual(c.byWish.none.length, 1); // Steam
+    assert.strictEqual(c.byHeir.length, 3); // Ana, Budi, unassigned
+    assert.strictEqual(c.byHeir[0].heir.name, 'Ana');
+    assert.strictEqual(c.byHeir[0].accounts.length, 2);
+    assert.strictEqual(c.byHeir[1].heir.name, 'Budi');
+    assert.strictEqual(c.byHeir[1].accounts.length, 1);
+    assert.strictEqual(c.byHeir[2].heir, null);
+    assert.strictEqual(c.byHeir[2].accounts.length, 2); // Netflix + Steam
+    assert.strictEqual(c.ghosts.length, 2);
+    assert.deepStrictEqual(c.ghosts.map((g) => g.service).sort(), ['Netflix', 'Steam']);
+  });
+  await test('generateExecutorChecklist: empty plan still produces a checklist', () => {
+    const c = L.generateExecutorChecklist(L.emptyState());
+    assert.ok(c.firstSteps.some((s) => /empty/i.test(s)));
+    assert.strictEqual(c.byWish.delete.length, 0);
+    assert.strictEqual(c.byHeir.length, 0);
+    assert.strictEqual(c.ghosts.length, 0);
+    const text = L.formatExecutorChecklist(L.emptyState());
+    assert.ok(/empty/i.test(text));
+  });
+  await test('formatExecutorChecklist: disclaimer + names + no state mutation', () => {
+    const s = checklistState();
+    const before = JSON.stringify(s);
+    const text = L.formatExecutorChecklist(s);
+    assert.ok(/NOT a legal/.test(text));
+    assert.ok(/Ana/.test(text) && /Budi/.test(text));
+    assert.ok(/Gmail/.test(text) && /Netflix/.test(text));
+    assert.ok(/UNRESOLVED GHOSTS \(2\)/.test(text));
+    assert.ok(/WORK PER HEIR/.test(text));
+    assert.strictEqual(JSON.stringify(s), before); // no mutation, no score change
+  });
+
   console.log('— crypto');
   await test('Web Crypto available in this Node', () => {
     assert.ok(L.getSubtle(), 'crypto.subtle missing — run on Node 19+');
